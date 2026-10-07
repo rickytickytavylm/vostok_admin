@@ -6,6 +6,8 @@ const apiBase = onLocal
   ? (location.port === "4000" ? "" : "http://localhost:4000")
   : "https://api.фабрика-восток.рф";
 
+const TOKEN_KEY = "vostok_admin_token";
+let token = onLocal ? "" : localStorage.getItem(TOKEN_KEY) || "";
 let categories = [];
 let products = [];
 let sectionId = "";
@@ -22,6 +24,7 @@ function toast(message, isError = false) {
 
 async function api(path, { method = "GET", body, form = false } = {}) {
   const headers = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
   if (!form && body) headers["Content-Type"] = "application/json";
   const res = await fetch(`${apiBase}/api${path}`, {
     method,
@@ -29,8 +32,49 @@ async function api(path, { method = "GET", body, form = false } = {}) {
     body: form ? body : body ? JSON.stringify(body) : undefined,
   });
   const data = await res.json().catch(() => ({}));
+  if (res.status === 401 && !onLocal && path !== "/auth/login") {
+    token = "";
+    localStorage.removeItem(TOKEN_KEY);
+    renderLogin("Пароль не подошёл");
+    throw new Error("Нужен пароль");
+  }
   if (!res.ok) throw new Error(data.error || "Не получилось сохранить");
   return data;
+}
+
+function renderLogin(message) {
+  app.innerHTML = "";
+  const form = document.createElement("form");
+  form.className = "editor";
+  const title = document.createElement("h1");
+  title.className = "page-title";
+  title.textContent = "Вход";
+  const lead = document.createElement("p");
+  lead.className = "lead";
+  lead.textContent = "Пароль тот, что записан на Railway в ADMIN_PASSWORD.";
+  const input = document.createElement("input");
+  input.type = "password";
+  input.autocomplete = "current-password";
+  input.required = true;
+  const error = document.createElement("p");
+  error.className = "lead";
+  error.hidden = !message;
+  if (message) error.textContent = message;
+  form.append(title, lead, field("Пароль", input), error, button("Войти", "primary", () => {}));
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    try {
+      const data = await api("/auth/login", { method: "POST", body: { password: input.value } });
+      token = data.token;
+      localStorage.setItem(TOKEN_KEY, token);
+      await load();
+      renderList();
+    } catch (err) {
+      error.hidden = false;
+      error.textContent = err.message;
+    }
+  });
+  app.append(form);
 }
 
 function section() {
@@ -377,4 +421,5 @@ async function prepareImage(file) {
   return new File([blob], "photo.jpg", { type: "image/jpeg" });
 }
 
-load().then(renderList).catch((error) => toast(error.message, true));
+if (!onLocal && !token) renderLogin();
+else load().then(renderList).catch((error) => toast(error.message, true));
