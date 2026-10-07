@@ -60,9 +60,16 @@ function renderLogin(message) {
   error.className = "lead";
   error.hidden = !message;
   if (message) error.textContent = message;
-  form.append(title, lead, field("Пароль", input), error, button("Войти", "primary", () => {}));
+  const submit = document.createElement("button");
+  submit.type = "submit";
+  submit.className = "primary";
+  submit.textContent = "Войти";
+  form.append(title, lead, field("Пароль", input), error, submit);
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
+    submit.disabled = true;
+    submit.textContent = "Вхожу…";
+    error.hidden = true;
     try {
       const data = await api("/auth/login", { method: "POST", body: { password: input.value } });
       token = data.token;
@@ -71,7 +78,9 @@ function renderLogin(message) {
       renderList();
     } catch (err) {
       error.hidden = false;
-      error.textContent = err.message;
+      error.textContent = err.message === "Failed to fetch" ? "Сервер не ответил. Проверь, что Railway уже перезапустился." : err.message;
+      submit.disabled = false;
+      submit.textContent = "Войти";
     }
   });
   app.append(form);
