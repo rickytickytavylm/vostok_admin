@@ -4,7 +4,7 @@ const app = document.querySelector("#app");
 const onLocal = location.hostname === "localhost" || location.hostname === "127.0.0.1";
 const apiBase = onLocal
   ? (location.port === "4000" ? "" : "http://localhost:4000")
-  : "https://api.фабрика-восток.рф";
+  : (window.VOSTOK_API || "").replace(/\/$/, "");
 
 const TOKEN_KEY = "vostok_admin_token";
 let token = onLocal ? "" : localStorage.getItem(TOKEN_KEY) || "";
