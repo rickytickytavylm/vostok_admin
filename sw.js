@@ -1,4 +1,4 @@
-const CACHE = "vostok-admin-v1";
+const CACHE = "vostok-admin-v2";
 const SHELL = [
   "./",
   "./index.html",

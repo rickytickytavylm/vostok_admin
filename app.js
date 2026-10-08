@@ -30,6 +30,7 @@ async function api(path, { method = "GET", body, form = false } = {}) {
     method,
     headers,
     body: form ? body : body ? JSON.stringify(body) : undefined,
+    signal: AbortSignal.timeout(15000),
   });
   const data = await res.json().catch(() => ({}));
   if (res.status === 401 && !onLocal && path !== "/auth/login") {
@@ -78,7 +79,8 @@ function renderLogin(message) {
       renderList();
     } catch (err) {
       error.hidden = false;
-      error.textContent = err.message === "Failed to fetch" ? "Сервер не ответил. Проверь, что Railway уже перезапустился." : err.message;
+      const silent = err.name === "TimeoutError" || err.message === "Failed to fetch" || /timeout|abort/i.test(err.message || "");
+      error.textContent = silent ? "api.фабрика-восток.рф не ответил. Пароль до сервера не дошёл: прокси завис." : err.message;
       submit.disabled = false;
       submit.textContent = "Войти";
     }
